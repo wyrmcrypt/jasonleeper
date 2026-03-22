@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jason Leeper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a23;
+      --border: rgba(255,255,255,0.08);
+      --text: #e8e6e1;
+      --muted: #7a8494;
+      --accent: #c8a96e;
+      --accent-dim: rgba(200,169,110,0.15);
+      --glow: rgba(200,169,110,0.25);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── SKYLINE BANNER ── */
+    .banner {
+      width: 100%;
+      height: 260px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #0a1628 0%, #112240 40%, #1a3a5c 70%, #0d0f14 100%);
+    }
+
+    /* Stars */
+    .stars {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.7) 0%, transparent 100%),
+        radial-gradient(1px 1px at 25% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 40% 15%, rgba(255,255,255,0.8) 0%, transparent 100%),
+        radial-gradient(1px 1px at 55% 8%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 18%, rgba(255,255,255,0.7) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 85% 12%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 92% 5%, rgba(255,255,255,0.8) 0%, transparent 100%),
+        radial-gradient(1px 1px at 15% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 25%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 78% 30%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    }
+
+    /* Water reflection */
+    .water {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 60px;
+      background: linear-gradient(180deg, transparent 0%, rgba(17,34,64,0.6) 50%, rgba(10,22,40,0.8) 100%);
+    }
+    .water::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        transparent 40px,
+        rgba(200,169,110,0.04) 40px,
+        rgba(200,169,110,0.04) 80px
+      );
+    }
+
+    /* SVG Skyline */
+    .skyline-svg {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(900px, 100%);
+      height: 180px;
+    }
+
+    /* Moon */
+    .moon {
+      position: absolute;
+      top: 24px;
+      right: 12%;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #fff8e7, #f0d890);
+      box-shadow: 0 0 30px 8px rgba(240,216,144,0.35), 0 0 60px 20px rgba(240,216,144,0.12);
+    }
+
+    /* ── PROFILE ── */
+    .profile {
+      margin-top: -40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+      position: relative;
+    }
+
+    .avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      background: linear-gradient(135deg, #1e2a3a, #2a3a50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: var(--accent);
+      box-shadow: 0 0 0 6px var(--bg), 0 0 24px var(--glow);
+    }
+
+    .name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* ── LINKS ── */
+    .links {
+      margin-top: 36px;
+      width: min(420px, calc(100% - 40px));
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .link-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .link-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent-dim);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .link-card:hover {
+      border-color: rgba(200,169,110,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(200,169,110,0.2);
+    }
+
+    .link-card:hover::before { opacity: 1; }
+
+    .link-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .link-icon svg { width: 22px; height: 22px; }
+
+    .link-text { z-index: 1; }
+    .link-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2px;
+    }
+    .link-title {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .link-arrow {
+      margin-left: auto;
+      color: var(--muted);
+      z-index: 1;
+      transition: transform 0.25s ease, color 0.25s ease;
+    }
+    .link-card:hover .link-arrow {
+      transform: translateX(4px);
+      color: var(--accent);
+    }
+
+    /* Icon backgrounds */
+    .ig   { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); }
+    .fb   { background: #1877f2; }
+    .em   { background: #2c3e50; }
+    .li   { background: #0a66c2; }
+    .mx   { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); }
+
+    /* ── FOOTER ── */
+    footer {
+      margin: 48px 0 32px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .profile  { animation: fadeUp 0.6s ease 0.1s both; }
+    .links    { animation: fadeUp 0.6s ease 0.25s both; }
+    footer    { animation: fadeUp 0.6s ease 0.4s both; }
+  </style>
+</head>
+<body>
+
+  <!-- BANNER -->
+  <div class="banner">
+    <div class="stars"></div>
+    <div class="moon"></div>
+
+    <!-- Singapore Skyline SVG -->
+    <svg class="skyline-svg" viewBox="0 0 900 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
+      <defs>
+        <linearGradient id="buildingGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a4a7a"/>
+          <stop offset="100%" stop-color="#1a2f50"/>
+        </linearGradient>
+        <linearGradient id="glowGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4a7ab0"/>
+          <stop offset="100%" stop-color="#1a3a6a"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Reflection layer -->
+      <rect x="0" y="155" width="900" height="25" fill="rgba(10,22,40,0.5)"/>
+
+      <!-- Far background buildings -->
+      <rect x="0"   y="110" width="30"  height="70" fill="#162035" opacity="0.6"/>
+      <rect x="28"  y="120" width="20"  height="60" fill="#162035" opacity="0.6"/>
+      <rect x="840" y="115" width="30"  height="65" fill="#162035" opacity="0.6"/>
+      <rect x="860" y="125" width="40"  height="55" fill="#162035" opacity="0.6"/>
+
+      <!-- Marina Bay Sands (iconic 3 towers + boat) -->
+      <!-- Tower 1 -->
+      <rect x="380" y="60" width="28" height="105" fill="url(#buildingGrad)"/>
+      <rect x="382" y="58" width="24" height="6"   fill="#2a4a7a"/>
+      <!-- Tower 2 -->
+      <rect x="420" y="55" width="28" height="110" fill="url(#buildingGrad)"/>
+      <rect x="422" y="53" width="24" height="6"   fill="#2a4a7a"/>
+      <!-- Tower 3 -->
+      <rect x="460" y="60" width="28" height="105" fill="url(#buildingGrad)"/>
+      <rect x="462" y="58" width="24" height="6"   fill="#2a4a7a"/>
+      <!-- SkyPark boat on top -->
+      <path d="M373 58 Q434 42 495 58 L492 65 Q434 50 376 65 Z" fill="#3a6a9a"/>
+      <!-- Windows MBS -->
+      <rect x="384" y="70" width="5" height="4" fill="rgba(200,169,110,0.4)" rx="1"/>
+      <rect x="393" y="70" width="5" height="4" fill="rgba(200,169,110,0.3)" rx="1"/>
+      <rect x="384" y="80" width="5" height="4" fill="rgba(200,169,110,0.5)" rx="1"/>
+      <rect x="393" y="80" width="5" height="4" fill="rgba(200,169,110,0.3)" rx="1"/>
+      <rect x="424" y="65" width="5" height="4" fill="rgba(200,169,110,0.4)" rx="1"/>
+      <rect x="433" y="65" width="5" height="4" fill="rgba(200,169,110,0.5)" rx="1"/>
+      <rect x="424" y="75" width="5" height="4" fill="rgba(200,169,110,0.3)" rx="1"/>
+      <rect x="433" y="75" width="5" height="4" fill="rgba(200,169,110,0.4)" rx="1"/>
+      <rect x="464" y="70" width="5" height="4" fill="rgba(200,169,110,0.4)" rx="1"/>
+      <rect x="473" y="70" width="5" height="4" fill="rgba(200,169,110,0.3)" rx="1"/>
+
+      <!-- One Raffles Place (tall tapered) -->
+      <polygon points="160,10 168,10 178,165 150,165" fill="url(#buildingGrad)"/>
+      <rect x="157" y="7" width="14" height="5" fill="#3a5a8a"/>
+      <!-- Antenna -->
+      <line x1="164" y1="0" x2="164" y2="12" stroke="#4a7aaa" stroke-width="1.5"/>
+      <!-- ORP windows -->
+      <rect x="158" y="20" width="3" height="3" fill="rgba(200,169,110,0.5)" rx="0.5"/>
+      <rect x="163" y="20" width="3" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="158" y="30" width="3" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+      <rect x="163" y="30" width="3" height="3" fill="rgba(200,169,110,0.5)" rx="0.5"/>
+      <rect x="158" y="40" width="3" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="163" y="40" width="3" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+
+      <!-- UOB Plaza -->
+      <rect x="185" y="40" width="35" height="125" fill="url(#buildingGrad)"/>
+      <rect x="185" y="38" width="35" height="5"   fill="#3a5a8a"/>
+      <!-- UOB windows grid -->
+      <rect x="189" y="48" width="5" height="4" fill="rgba(200,169,110,0.35)" rx="1"/>
+      <rect x="197" y="48" width="5" height="4" fill="rgba(200,169,110,0.25)" rx="1"/>
+      <rect x="205" y="48" width="5" height="4" fill="rgba(200,169,110,0.4)"  rx="1"/>
+      <rect x="189" y="58" width="5" height="4" fill="rgba(200,169,110,0.3)"  rx="1"/>
+      <rect x="197" y="58" width="5" height="4" fill="rgba(200,169,110,0.4)"  rx="1"/>
+      <rect x="205" y="58" width="5" height="4" fill="rgba(200,169,110,0.3)"  rx="1"/>
+      <rect x="189" y="68" width="5" height="4" fill="rgba(200,169,110,0.4)"  rx="1"/>
+      <rect x="197" y="68" width="5" height="4" fill="rgba(200,169,110,0.35)" rx="1"/>
+      <rect x="205" y="68" width="5" height="4" fill="rgba(200,169,110,0.25)" rx="1"/>
+
+      <!-- DBS/OCBC towers (left cluster) -->
+      <rect x="230" y="55"  width="30" height="110" fill="url(#buildingGrad)"/>
+      <rect x="265" y="70"  width="25" height="95"  fill="#1e3050"/>
+      <rect x="295" y="80"  width="22" height="85"  fill="url(#buildingGrad)"/>
+      <rect x="320" y="65"  width="28" height="100" fill="#1e3050"/>
+      <rect x="351" y="75"  width="22" height="90"  fill="url(#buildingGrad)"/>
+
+      <!-- Windows for left cluster -->
+      <rect x="234" y="65" width="4" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+      <rect x="241" y="65" width="4" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="248" y="65" width="4" height="3" fill="rgba(200,169,110,0.5)" rx="0.5"/>
+      <rect x="234" y="75" width="4" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="241" y="75" width="4" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+      <rect x="248" y="75" width="4" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+
+      <!-- Right side buildings -->
+      <rect x="530" y="70"  width="32" height="95"  fill="url(#buildingGrad)"/>
+      <rect x="565" y="50"  width="28" height="115" fill="#1e3050"/>
+      <!-- Tall right tower -->
+      <polygon points="595,15 605,15 618,165 583,165" fill="url(#buildingGrad)"/>
+      <rect x="592" y="12" width="16" height="5" fill="#3a5a8a"/>
+      <line x1="600" y1="5"  x2="600" y2="14" stroke="#4a7aaa" stroke-width="1.5"/>
+      <!-- Windows right tall tower -->
+      <rect x="594" y="25" width="3" height="3" fill="rgba(200,169,110,0.5)" rx="0.5"/>
+      <rect x="600" y="25" width="3" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="594" y="35" width="3" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+      <rect x="600" y="35" width="3" height="3" fill="rgba(200,169,110,0.5)" rx="0.5"/>
+      <rect x="594" y="45" width="3" height="3" fill="rgba(200,169,110,0.3)" rx="0.5"/>
+      <rect x="600" y="45" width="3" height="3" fill="rgba(200,169,110,0.4)" rx="0.5"/>
+
+      <rect x="622" y="60" width="30" height="105" fill="#1e3050"/>
+      <rect x="655" y="75" width="25" height="90"  fill="url(#buildingGrad)"/>
+      <rect x="683" y="85" width="28" height="80"  fill="#1e3050"/>
+      <rect x="714" y="70" width="22" height="95"  fill="url(#buildingGrad)"/>
+      <rect x="738" y="90" width="20" height="75"  fill="#1e3050"/>
+      <rect x="760" y="80" width="25" height="85"  fill="url(#buildingGrad)"/>
+      <rect x="787" y="95" width="20" height="70"  fill="#162035"/>
+      <rect x="809" y="100" width="22" height="65" fill="url(#buildingGrad)"/>
+      <rect x="833" y="110" width="18" height="55" fill="#162035"/>
+
+      <!-- Gardens by the Bay Supertrees (iconic) -->
+      <!-- Supertree 1 -->
+      <line x1="500" y1="165" x2="500" y2="105" stroke="#2a5a3a" stroke-width="4"/>
+      <ellipse cx="500" cy="100" rx="18" ry="10" fill="#2a6a3a" opacity="0.9"/>
+      <ellipse cx="500" cy="100" rx="14" ry="7"  fill="#3a8a4a" opacity="0.8"/>
+      <!-- Supertree 2 -->
+      <line x1="522" y1="165" x2="522" y2="115" stroke="#2a5a3a" stroke-width="3"/>
+      <ellipse cx="522" cy="111" rx="14" ry="8" fill="#2a6a3a" opacity="0.9"/>
+      <ellipse cx="522" cy="111" rx="10" ry="6" fill="#3a8a4a" opacity="0.8"/>
+      <!-- Supertree lights -->
+      <circle cx="500" cy="98"  r="2" fill="rgba(200,169,110,0.7)"/>
+      <circle cx="522" cy="109" r="1.5" fill="rgba(200,169,110,0.6)"/>
+
+      <!-- Ground / waterline -->
+      <rect x="0" y="163" width="900" height="3" fill="rgba(74,122,160,0.4)"/>
+
+      <!-- Lights on water (reflection dots) -->
+      <circle cx="164" cy="170" r="1.5" fill="rgba(200,169,110,0.3)"/>
+      <circle cx="434" cy="170" r="2"   fill="rgba(200,169,110,0.25)"/>
+      <circle cx="600" cy="170" r="1.5" fill="rgba(200,169,110,0.3)"/>
+      <circle cx="500" cy="172" r="1"   fill="rgba(58,138,74,0.4)"/>
+    </svg>
+
+    <div class="water"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="profile">
+    <div class="avatar">JL</div>
+    <h1 class="name">Jason Leeper</h1>
+    <p class="tagline">Singapore &nbsp;·&nbsp; Connect With Me</p>
+  </div>
+
+  <!-- LINKS -->
+  <div class="links">
+
+    <!-- Instagram -->
+    <a class="link-card" href="https://www.instagram.com/wyrmcrypt/" target="_blank" rel="noopener">
+      <div class="link-icon ig">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <div class="link-label">Social</div>
+        <div class="link-title">Instagram</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+
+    <!-- Facebook -->
+    <a class="link-card" href="https://facebook.com/wyrmcrypt" target="_blank" rel="noopener">
+      <div class="link-icon fb">
+        <svg viewBox="0 0 24 24" fill="white">
+          <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <div class="link-label">Social</div>
+        <div class="link-title">Facebook</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+
+    <!-- Email -->
+    <a class="link-card" href="mailto:jason.leeper@gmail.com">
+      <div class="link-icon em">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <div class="link-label">Contact</div>
+        <div class="link-title">Email Me</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+
+    <!-- LinkedIn -->
+    <a class="link-card" href="https://www.linkedin.com/in/jason-leeper/" target="_blank" rel="noopener">
+      <div class="link-icon li">
+        <svg viewBox="0 0 24 24" fill="white">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect x="2" y="9" width="4" height="12"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <div class="link-label">Professional</div>
+        <div class="link-title">LinkedIn</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+
+    <!-- Moxfield -->
+    <a class="link-card" href="https://moxfield.com/users/wyrmcrypt" target="_blank" rel="noopener">
+      <div class="link-icon mx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(200,169,110,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="2" width="12" height="16" rx="1.5"/>
+          <rect x="9" y="6" width="12" height="16" rx="1.5" fill="rgba(200,169,110,0.08)"/>
+          <line x1="6" y1="7" x2="12" y2="7"/>
+          <line x1="6" y1="10" x2="12" y2="10"/>
+          <line x1="6" y1="13" x2="10" y2="13"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <div class="link-label">Magic: The Gathering</div>
+        <div class="link-title">Moxfield</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+
+  </div>
+
+  <footer>© 2026 Jason Leeper &nbsp;·&nbsp; Singapore</footer>
+
+</body>
+</html>
