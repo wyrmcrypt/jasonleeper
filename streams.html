@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Finder - Find Your Shows</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #e50914, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+            max-width: 600px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #1a1f3a;
+            color: #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #e50914;
+            background: #242938;
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: #666;
+        }
+
+        .type-toggles {
+            display: flex;
+            gap: 8px;
+        }
+
+        .type-btn {
+            padding: 10px 20px;
+            border: 2px solid #333;
+            background: #1a1f3a;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .type-btn:hover {
+            border-color: #555;
+        }
+
+        .type-btn.active {
+            background: #e50914;
+            border-color: #e50914;
+            color: white;
+        }
+
+        .error-message {
+            background: rgba(229, 9, 20, 0.2);
+            border: 1px solid #e50914;
+            color: #ff6b6b;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .results-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+
+        .results-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #b0b0b0;
+        }
+
+        .spinner {
+            border: 3px solid #333;
+            border-top: 3px solid #e50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .result-card {
+            background: #1a1f3a;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .result-card:hover {
+            transform: translateY(-8px);
+            border-color: #e50914;
+            box-shadow: 0 12px 30px rgba(229, 9, 20, 0.3);
+        }
+
+        .poster-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2/3;
+            overflow: hidden;
+            background: #333;
+        }
+
+        .poster-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .result-card:hover .poster-img {
+            transform: scale(1.05);
+        }
+
+        .no-poster {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+
+        .card-content {
+            padding: 14px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            line-height: 1.3;
+            color: #e0e0e0;
+        }
+
+        .card-year {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .card-rating {
+            font-size: 0.85rem;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #1a1f3a;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid #333;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            position: relative;
+            background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), rgba(255, 107, 53, 0.3));
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(229, 9, 20, 0.5);
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-poster {
+            width: 200px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        .detail-poster img {
+            width: 100%;
+        }
+
+        .detail-info h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+
+        .detail-year {
+            color: #888;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .detail-rating {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .detail-overview {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .streaming-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+        }
+
+        .streaming-region {
+            margin-bottom: 25px;
+        }
+
+        .region-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #e0e0e0;
+        }
+
+        .providers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .provider-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            background: #242938;
+            border-radius: 8px;
+            border: 1px solid #333;
+            transition: all 0.2s ease;
+        }
+
+        .provider-badge:hover {
+            background: #2a3042;
+            border-color: #e50914;
+        }
+
+        .provider-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+            background: #333;
+        }
+
+        .provider-name {
+            font-size: 0.8rem;
+            color: #b0b0b0;
+            text-align: center;
+        }
+
+        .no-providers {
+            color: #666;
+            padding: 20px;
+            text-align: center;
+            background: #242938;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .region-flag {
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-poster {
+                width: 100%;
+                max-width: 300px;
+                margin: 0 auto;
+            }
+
+            .results-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+            }
+
+            .search-input-wrapper {
+                min-width: 200px;
+            }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Stream Finder</h1>
+            <p class="tagline">Find where your favorite movies and TV shows are streaming</p>
+        </header>
+
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput" 
+                    placeholder="Search for a movie or TV show..."
+                    autocomplete="off"
+                >
+            </div>
+            <div class="type-toggles">
+                <button class="type-btn active" data-type="all">All</button>
+                <button class="type-btn" data-type="movie">Movies</button>
+                <button class="type-btn" data-type="tv">TV Shows</button>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div id="resultsContainer"></div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0; flex: 1;">Details</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body" id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // TMDB API Key - Get from https://www.themoviedb.org/settings/api
+        const TMDB_API_KEY = '32fe153c33aa8778ff60afe15c58b724';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        const TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p/w342';
+        const TMDB_BACKDROP_URL = 'https://image.tmdb.org/t/p/w1280';
+
+        let currentSearchType = 'all';
+        let debounceTimer;
+
+        const elements = {
+            searchInput: document.getElementById('searchInput'),
+            resultsContainer: document.getElementById('resultsContainer'),
+            typeButtons: document.querySelectorAll('.type-btn'),
+            detailModal: document.getElementById('detailModal'),
+            detailContent: document.getElementById('detailContent'),
+            closeModal: document.getElementById('closeModal'),
+            errorMessage: document.getElementById('errorMessage')
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
+                showError('⚠️ TMDB API key not set. Get one free at https://www.themoviedb.org/settings/api');
+                return;
+            }
+
+            elements.searchInput.addEventListener('input', handleSearch);
+            elements.typeButtons.forEach(btn => {
+                btn.addEventListener('click', handleTypeChange);
+            });
+            elements.closeModal.addEventListener('click', closeModal);
+            elements.detailModal.addEventListener('click', (e) => {
+                if (e.target === elements.detailModal) closeModal();
+            });
+        });
+
+        function handleTypeChange(e) {
+            elements.typeButtons.forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            currentSearchType = e.target.dataset.type;
+            if (elements.searchInput.value) {
+                handleSearch();
+            }
+        }
+
+        function handleSearch() {
+            clearTimeout(debounceTimer);
+            const query = elements.searchInput.value.trim();
+            
+            if (!query) {
+                elements.resultsContainer.innerHTML = '';
+                hideError();
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                searchContent(query);
+            }, 300);
+        }
+
+        async function searchContent(query) {
+            try {
+                hideError();
+                showLoading();
+
+                let allResults = [];
+
+                // Use /search/multi for "all", otherwise use specific type endpoint
+                if (currentSearchType === 'all') {
+                    const response = await fetch(
+                        `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
+                    );
+
+                    if (!response.ok) throw new Error('Failed to fetch results');
+                    
+                    const data = await response.json();
+                    allResults = [...(data.results || [])];
+                } else {
+                    const response = await fetch(
+                        `${TMDB_BASE_URL}/search/${currentSearchType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
+                    );
+
+                    if (!response.ok) throw new Error('Failed to fetch results');
+                    
+                    const data = await response.json();
+                    // Add media_type for consistency with /search/multi responses
+                    allResults = (data.results || []).map(item => ({
+                        ...item,
+                        media_type: currentSearchType
+                    }));
+                }
+
+                // Filter and sort results - remove duplicates by ID
+                const uniqueResults = {};
+                allResults.forEach(item => {
+                    // Determine media type
+                    let mediaType = item.media_type;
+                    if (!mediaType) {
+                        mediaType = item.release_date ? 'movie' : 'tv';
+                    }
+                    
+                    const id = `${item.id}-${mediaType}`;
+                    if (!uniqueResults[id] && item.poster_path) {
+                        uniqueResults[id] = { ...item, media_type: mediaType };
+                    }
+                });
+
+                const filteredResults = Object.values(uniqueResults)
+                    .filter(item => item.media_type === 'movie' || item.media_type === 'tv')
+                    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+                displayResults(filteredResults);
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Failed to search. Please try again.');
+                elements.resultsContainer.innerHTML = '';
+            }
+        }
+
+        function displayResults(results) {
+            if (results.length === 0) {
+                elements.resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔍</div>
+                        <p>No results found. Try a different search term.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <div class="results-info">
+                    <div class="results-title">Found ${results.length} result${results.length !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="results-grid">
+                    ${results.map(item => createResultCard(item)).join('')}
+                </div>
+            `;
+            elements.resultsContainer.innerHTML = html;
+
+            // Add click listeners
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.id;
+                    const type = card.dataset.type;
+                    showDetails(id, type);
+                });
+            });
+        }
+
+        function createResultCard(item) {
+            const type = item.media_type || (item.release_date ? 'movie' : 'tv');
+            const title = item.title || item.name;
+            const year = item.release_date ? item.release_date.split('-')[0] : (item.first_air_date ? item.first_air_date.split('-')[0] : '');
+            const posterPath = item.poster_path;
+            const rating = item.vote_average ? item.vote_average.toFixed(1) : '—';
+
+            return `
+                <div class="result-card" data-id="${item.id}" data-type="${type}">
+                    <div class="poster-container">
+                        ${posterPath ? 
+                            `<img src="${TMDB_IMAGE_URL}${posterPath}" alt="${title}" class="poster-img">` :
+                            `<div class="no-poster">No Image</div>`
+                        }
+                    </div>
+                    <div class="card-content">
+                        <div class="card-title">${title}</div>
+                        ${year ? `<div class="card-year">${year}</div>` : ''}
+                        <div class="card-rating">⭐ ${rating}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function showDetails(id, type) {
+            try {
+                // Get TMDB details with watch/providers data
+                const response = await fetch(
+                    `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&append_to_response=watch/providers`
+                );
+
+                if (!response.ok) throw new Error('Failed to fetch details');
+                
+                const data = await response.json();
+                displayDetails(data, type);
+            } catch (error) {
+                console.error('Details error:', error);
+                showError('Failed to load details.');
+            }
+        }
+
+        function displayDetails(data, type) {
+            const title = data.title || data.name;
+            const year = data.release_date ? data.release_date.split('-')[0] : (data.first_air_date ? data.first_air_date.split('-')[0] : '');
+            const rating = data.vote_average ? data.vote_average.toFixed(1) : '—';
+            const overview = data.overview || 'No description available.';
+            const posterPath = data.poster_path;
+
+            // Get streaming providers from TMDB watch/providers - it comes nested in results
+            const watchProviders = data['watch/providers'] || {};
+            const results = watchProviders.results || {};
+            const sgProviders = results.SG?.flatrate || [];
+            const usProviders = results.US?.flatrate || [];
+
+            // Debug log to check the data
+            console.log('Watch Providers Data:', watchProviders);
+            console.log('SG Providers:', sgProviders);
+            console.log('US Providers:', usProviders);
+
+            let html = `
+                <div class="detail-grid">
+                    ${posterPath ? `
+                        <div class="detail-poster">
+                            <img src="${TMDB_IMAGE_URL}${posterPath}" alt="${title}">
+                        </div>
+                    ` : ''}
+                    <div class="detail-info">
+                        <h2>${title}</h2>
+                        ${year ? `<div class="detail-year">${year}</div>` : ''}
+                        <div class="detail-rating">⭐ ${rating}/10</div>
+                        <div class="detail-overview">${overview}</div>
+                    </div>
+                </div>
+
+                <div class="streaming-section">
+                    <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: #e0e0e0;">📺 Where to Watch</h3>
+                    
+                    <div class="streaming-region">
+                        <div class="region-title"><span class="region-flag">🇸🇬</span>Singapore</div>
+                        ${renderProviders(sgProviders)}
+                    </div>
+
+                    <div class="streaming-region">
+                        <div class="region-title"><span class="region-flag">🇺🇸</span>United States</div>
+                        ${renderProviders(usProviders)}
+                    </div>
+                </div>
+            `;
+
+            elements.detailContent.innerHTML = html;
+            elements.detailModal.classList.add('show');
+        }
+
+        function renderProviders(providers) {
+            if (!providers || providers.length === 0) {
+                return '<div class="no-providers">Not available in this region</div>';
+            }
+
+            return `
+                <div class="providers-list">
+                    ${providers.map(provider => `
+                        <div class="provider-badge">
+                            ${provider.logo_path ? 
+                                `<img src="${TMDB_IMAGE_URL}${provider.logo_path}" alt="${provider.provider_name}" class="provider-logo">` :
+                                `<div class="provider-logo" style="background: #e50914; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border-radius: 4px;">${provider.provider_name.substring(0, 2)}</div>`
+                            }
+                            <span class="provider-name">${provider.provider_name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            elements.detailModal.classList.remove('show');
+        }
+
+        function showLoading() {
+            elements.resultsContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Searching...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            elements.errorMessage.textContent = message;
+            elements.errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            elements.errorMessage.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
