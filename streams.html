@@ -426,6 +426,74 @@
             font-size: 1.2rem;
         }
 
+        .cast-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+        }
+
+        .cast-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+
+        .cast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .cast-member {
+            background: #242938;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        .cast-member:hover {
+            border-color: #e50914;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(229, 9, 20, 0.2);
+        }
+
+        .cast-photo {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: #333;
+        }
+
+        .cast-no-photo {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 2rem;
+        }
+
+        .cast-name {
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            line-height: 1.3;
+        }
+
+        .cast-character {
+            padding: 0 10px 10px;
+            font-size: 0.75rem;
+            color: #888;
+            line-height: 1.2;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.5rem;
@@ -679,9 +747,9 @@
 
         async function showDetails(id, type) {
             try {
-                // Get TMDB details with watch/providers data
+                // Get TMDB details with watch/providers and credits data
                 const response = await fetch(
-                    `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&append_to_response=watch/providers`
+                    `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&append_to_response=watch/providers,credits`
                 );
 
                 if (!response.ok) throw new Error('Failed to fetch details');
@@ -707,10 +775,9 @@
             const sgProviders = results.SG?.flatrate || [];
             const usProviders = results.US?.flatrate || [];
 
-            // Debug log to check the data
-            console.log('Watch Providers Data:', watchProviders);
-            console.log('SG Providers:', sgProviders);
-            console.log('US Providers:', usProviders);
+            // Get cast from credits
+            const credits = data.credits || {};
+            const cast = (credits.cast || []).slice(0, 12); // Top 12 cast members
 
             let html = `
                 <div class="detail-grid">
@@ -740,10 +807,37 @@
                         ${renderProviders(usProviders)}
                     </div>
                 </div>
+
+                ${cast.length > 0 ? `
+                    <div class="cast-section">
+                        <h3 class="cast-title">👥 Cast</h3>
+                        <div class="cast-grid">
+                            ${cast.map(member => `
+                                <div class="cast-member" data-actor-id="${member.id}" data-actor-name="${member.name}">
+                                    ${member.profile_path ? 
+                                        `<img src="${TMDB_IMAGE_URL}${member.profile_path}" alt="${member.name}" class="cast-photo">` :
+                                        `<div class="cast-no-photo">🎭</div>`
+                                    }
+                                    <div class="cast-name">${member.name}</div>
+                                    <div class="cast-character">${member.character || 'Unknown'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             `;
 
             elements.detailContent.innerHTML = html;
             elements.detailModal.classList.add('show');
+
+            // Add click handlers for cast members
+            document.querySelectorAll('.cast-member').forEach(member => {
+                member.addEventListener('click', () => {
+                    const actorId = member.dataset.actorId;
+                    const actorName = member.dataset.actorName;
+                    showActorFilmography(actorId, actorName);
+                });
+            });
         }
 
         function renderProviders(providers) {
@@ -764,6 +858,207 @@
                     `).join('')}
                 </div>
             `;
+        }
+
+        async function showActorFilmography(actorId, actorName) {
+            try {
+                // Fetch actor's combined filmography (movies and TV)
+                const response = await fetch(
+                    `${TMDB_BASE_URL}/person/${actorId}?api_key=${TMDB_API_KEY}&append_to_response=movie_credits,tv_credits`
+                );
+
+                if (!response.ok) throw new Error('Failed to fetch actor details');
+                
+                const data = await response.json();
+                displayActorFilmography(data, actorName);
+            } catch (error) {
+                console.error('Actor filmography error:', error);
+                showError('Failed to load actor filmography.');
+            }
+        }
+
+        function displayActorFilmography(data, actorName) {
+            const profilePath = data.profile_path;
+            const biography = data.biography || 'No biography available.';
+            
+            // Get filmography
+            const movieCredits = data.movie_credits?.cast || [];
+            const tvCredits = data.tv_credits?.cast || [];
+            
+            // Sort by release date and filter for valid entries
+            const allMovies = movieCredits
+                .filter(m => m.poster_path && m.release_date)
+                .sort((a, b) => new Date(b.release_date) - new Date(a.release_date));
+            
+            const allShows = tvCredits
+                .filter(t => t.poster_path && t.first_air_date)
+                .sort((a, b) => new Date(b.first_air_date) - new Date(a.first_air_date));
+
+            // Initial display of 12 items
+            const movieDisplay = allMovies.slice(0, 12);
+            const showDisplay = allShows.slice(0, 12);
+            const hasMoreMovies = allMovies.length > 12;
+            const hasMoreShows = allShows.length > 12;
+
+            let html = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    ${profilePath ? `
+                        <img src="${TMDB_IMAGE_URL}${profilePath}" alt="${actorName}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #e50914; margin-bottom: 15px;">
+                    ` : ''}
+                    <h2 style="color: #e0e0e0; margin-bottom: 10px;">${actorName}</h2>
+                    <p style="color: #b0b0b0; line-height: 1.6; max-width: 600px; margin: 0 auto;">${biography.substring(0, 300)}${biography.length > 300 ? '...' : ''}</p>
+                </div>
+
+                ${movieDisplay.length > 0 ? `
+                    <div style="margin-bottom: 30px;" data-section="movies">
+                        <h3 style="color: #e0e0e0; margin-bottom: 15px; font-size: 1.2rem;">🎬 Movies (${allMovies.length})</h3>
+                        <div class="results-grid" data-movies-grid>
+                            ${movieDisplay.map(movie => `
+                                <div class="result-card" data-id="${movie.id}" data-type="movie">
+                                    <div class="poster-container">
+                                        ${movie.poster_path ? 
+                                            `<img src="${TMDB_IMAGE_URL}${movie.poster_path}" alt="${movie.title}" class="poster-img">` :
+                                            `<div class="no-poster">No Image</div>`
+                                        }
+                                    </div>
+                                    <div class="card-content">
+                                        <div class="card-title">${movie.title}</div>
+                                        <div class="card-year">${movie.release_date.split('-')[0]}</div>
+                                        <div class="card-rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : '—'}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${hasMoreMovies ? `
+                            <div style="text-align: center; margin-top: 20px;">
+                                <button data-show-more-movies style="background: #e50914; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                                    Show More Movies (${allMovies.length - 12} more)
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+
+                ${showDisplay.length > 0 ? `
+                    <div style="margin-bottom: 30px;" data-section="shows">
+                        <h3 style="color: #e0e0e0; margin-bottom: 15px; font-size: 1.2rem;">📺 TV Shows (${allShows.length})</h3>
+                        <div class="results-grid" data-shows-grid>
+                            ${showDisplay.map(show => `
+                                <div class="result-card" data-id="${show.id}" data-type="tv">
+                                    <div class="poster-container">
+                                        ${show.poster_path ? 
+                                            `<img src="${TMDB_IMAGE_URL}${show.poster_path}" alt="${show.name}" class="poster-img">` :
+                                            `<div class="no-poster">No Image</div>`
+                                        }
+                                    </div>
+                                    <div class="card-content">
+                                        <div class="card-title">${show.name}</div>
+                                        <div class="card-year">${show.first_air_date.split('-')[0]}</div>
+                                        <div class="card-rating">⭐ ${show.vote_average ? show.vote_average.toFixed(1) : '—'}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${hasMoreShows ? `
+                            <div style="text-align: center; margin-top: 20px;">
+                                <button data-show-more-shows style="background: #e50914; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                                    Show More Shows (${allShows.length - 12} more)
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            `;
+
+            elements.detailContent.innerHTML = html;
+            
+            // Add show more functionality for movies
+            const showMoreMoviesBtn = document.querySelector('[data-show-more-movies]');
+            if (showMoreMoviesBtn) {
+                showMoreMoviesBtn.addEventListener('click', () => {
+                    const moviesGrid = document.querySelector('[data-movies-grid]');
+                    const newMovies = allMovies.slice(12).map(movie => `
+                        <div class="result-card" data-id="${movie.id}" data-type="movie">
+                            <div class="poster-container">
+                                ${movie.poster_path ? 
+                                    `<img src="${TMDB_IMAGE_URL}${movie.poster_path}" alt="${movie.title}" class="poster-img">` :
+                                    `<div class="no-poster">No Image</div>`
+                                }
+                            </div>
+                            <div class="card-content">
+                                <div class="card-title">${movie.title}</div>
+                                <div class="card-year">${movie.release_date.split('-')[0]}</div>
+                                <div class="card-rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : '—'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    moviesGrid.innerHTML += newMovies;
+                    showMoreMoviesBtn.parentElement.remove();
+                    
+                    // Re-add click handlers for newly added cards
+                    document.querySelectorAll('[data-section="movies"] .result-card').forEach(card => {
+                        card.addEventListener('click', () => {
+                            const id = card.dataset.id;
+                            const type = card.dataset.type;
+                            showDetails(id, type);
+                        });
+                    });
+                });
+            }
+
+            // Add show more functionality for shows
+            const showMoreShowsBtn = document.querySelector('[data-show-more-shows]');
+            if (showMoreShowsBtn) {
+                showMoreShowsBtn.addEventListener('click', () => {
+                    const showsGrid = document.querySelector('[data-shows-grid]');
+                    const newShows = allShows.slice(12).map(show => `
+                        <div class="result-card" data-id="${show.id}" data-type="tv">
+                            <div class="poster-container">
+                                ${show.poster_path ? 
+                                    `<img src="${TMDB_IMAGE_URL}${show.poster_path}" alt="${show.name}" class="poster-img">` :
+                                    `<div class="no-poster">No Image</div>`
+                                }
+                            </div>
+                            <div class="card-content">
+                                <div class="card-title">${show.name}</div>
+                                <div class="card-year">${show.first_air_date.split('-')[0]}</div>
+                                <div class="card-rating">⭐ ${show.vote_average ? show.vote_average.toFixed(1) : '—'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    showsGrid.innerHTML += newShows;
+                    showMoreShowsBtn.parentElement.remove();
+                    
+                    // Re-add click handlers for newly added cards
+                    document.querySelectorAll('[data-section="shows"] .result-card').forEach(card => {
+                        card.addEventListener('click', () => {
+                            const id = card.dataset.id;
+                            const type = card.dataset.type;
+                            showDetails(id, type);
+                        });
+                    });
+                });
+            }
+            
+            // Add click handlers for initial movies/shows in filmography
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.id;
+                    const type = card.dataset.type;
+                    showDetails(id, type);
+                });
+            });
+
+            // Add back button
+            const backBtn = document.createElement('button');
+            backBtn.textContent = '← Back';
+            backBtn.style.cssText = 'position: absolute; top: 20px; left: 20px; background: #e50914; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;';
+            document.querySelector('.modal-body').insertBefore(backBtn, document.querySelector('.modal-body').firstChild);
+            
+            backBtn.addEventListener('click', () => {
+                // Go back - would need to store previous state
+                closeModal();
+            });
         }
 
         function closeModal() {
