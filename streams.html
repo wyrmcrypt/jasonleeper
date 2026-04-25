@@ -544,7 +544,7 @@
                     type="text" 
                     class="search-input" 
                     id="searchInput" 
-                    placeholder="Search for a movie or TV show..."
+                    placeholder="Search for a movie, TV show, or actor..."
                     autocomplete="off"
                 >
             </div>
@@ -552,6 +552,7 @@
                 <button class="type-btn active" data-type="all">All</button>
                 <button class="type-btn" data-type="movie">Movies</button>
                 <button class="type-btn" data-type="tv">TV Shows</button>
+                <button class="type-btn" data-type="person">Actors</button>
             </div>
         </div>
 
@@ -563,6 +564,7 @@
     <div id="detailModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
+                <button class="close-btn" id="backBtn" style="display: none;" title="Go back">←</button>
                 <h2 style="margin: 0; flex: 1;">Details</h2>
                 <button class="close-btn" id="closeModal">&times;</button>
             </div>
@@ -579,6 +581,7 @@
 
         let currentSearchType = 'all';
         let debounceTimer;
+        let navigationStack = []; // Track navigation for back button
 
         const elements = {
             searchInput: document.getElementById('searchInput'),
@@ -587,6 +590,7 @@
             detailModal: document.getElementById('detailModal'),
             detailContent: document.getElementById('detailContent'),
             closeModal: document.getElementById('closeModal'),
+            backBtn: document.getElementById('backBtn'),
             errorMessage: document.getElementById('errorMessage')
         };
 
@@ -602,6 +606,7 @@
                 btn.addEventListener('click', handleTypeChange);
             });
             elements.closeModal.addEventListener('click', closeModal);
+            elements.backBtn.addEventListener('click', goBack);
             elements.detailModal.addEventListener('click', (e) => {
                 if (e.target === elements.detailModal) closeModal();
             });
@@ -648,6 +653,21 @@
                     
                     const data = await response.json();
                     allResults = [...(data.results || [])];
+                } else if (currentSearchType === 'person') {
+                    // Handle actor search separately
+                    const response = await fetch(
+                        `${TMDB_BASE_URL}/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
+                    );
+
+                    if (!response.ok) throw new Error('Failed to fetch results');
+                    
+                    const data = await response.json();
+                    allResults = (data.results || []).map(item => ({
+                        ...item,
+                        media_type: 'person'
+                    }));
+                    displayActorSearchResults(allResults);
+                    return;
                 } else {
                     const response = await fetch(
                         `${TMDB_BASE_URL}/search/${currentSearchType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
@@ -711,12 +731,62 @@
             `;
             elements.resultsContainer.innerHTML = html;
 
-            // Add click listeners
-            document.querySelectorAll('.result-card').forEach(card => {
+            // Add click listeners - scope to results container only
+            elements.resultsContainer.querySelectorAll('.result-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const id = card.dataset.id;
                     const type = card.dataset.type;
+                    navigationStack = []; // Reset navigation stack for new item
                     showDetails(id, type);
+                });
+            });
+        }
+
+        function displayActorSearchResults(results) {
+            if (results.length === 0) {
+                elements.resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔍</div>
+                        <p>No actors found. Try a different search term.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter out actors without profile images
+            const actorsWithPhotos = results.filter(actor => actor.profile_path);
+            
+            const html = `
+                <div class="results-info">
+                    <div class="results-title">Found ${actorsWithPhotos.length} actor${actorsWithPhotos.length !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="results-grid">
+                    ${actorsWithPhotos.map(actor => `
+                        <div class="result-card actor-card" data-id="${actor.id}" data-name="${actor.name}">
+                            <div class="poster-container">
+                                ${actor.profile_path ? 
+                                    `<img src="${TMDB_IMAGE_URL}${actor.profile_path}" alt="${actor.name}" class="poster-img">` :
+                                    `<div class="no-poster">No Image</div>`
+                                }
+                            </div>
+                            <div class="card-content">
+                                <div class="card-title">${actor.name}</div>
+                                ${actor.known_for_department ? `<div class="card-year">${actor.known_for_department}</div>` : ''}
+                                ${actor.known_for && actor.known_for.length > 0 ? `<div class="card-year">Known for: ${actor.known_for.map(k => k.title || k.name).slice(0, 2).join(', ')}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            elements.resultsContainer.innerHTML = html;
+
+            // Add click listeners for actor cards - scope to results container only
+            elements.resultsContainer.querySelectorAll('.actor-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.id;
+                    const name = card.dataset.name;
+                    navigationStack = []; // Reset navigation stack
+                    showActorFilmography(id, name);
                 });
             });
         }
@@ -762,7 +832,13 @@
             }
         }
 
-        function displayDetails(data, type) {
+        function displayDetails(data, type, skipNavPush = false) {
+            // Push to navigation stack if we came from an actor page (and not navigating back)
+            if (!skipNavPush && navigationStack.length > 0 && navigationStack[navigationStack.length - 1].type === 'actor') {
+                navigationStack.push({ type: 'detail', data: data, mediaType: type });
+                elements.backBtn.style.display = 'flex';
+            }
+            
             const title = data.title || data.name;
             const year = data.release_date ? data.release_date.split('-')[0] : (data.first_air_date ? data.first_air_date.split('-')[0] : '');
             const rating = data.vote_average ? data.vote_average.toFixed(1) : '—';
@@ -835,6 +911,7 @@
                 member.addEventListener('click', () => {
                     const actorId = member.dataset.actorId;
                     const actorName = member.dataset.actorName;
+                    navigationStack.push({ type: 'detail', data: data, mediaType: type });
                     showActorFilmography(actorId, actorName);
                 });
             });
@@ -877,7 +954,13 @@
             }
         }
 
-        function displayActorFilmography(data, actorName) {
+        function displayActorFilmography(data, actorName, skipNavPush = false) {
+            // Add to navigation stack only if not navigating back
+            if (!skipNavPush) {
+                navigationStack.push({ type: 'actor', data: data, name: actorName, id: data.id });
+                elements.backBtn.style.display = 'flex';
+            }
+
             const profilePath = data.profile_path;
             const biography = data.biography || 'No biography available.';
             
@@ -971,6 +1054,7 @@
             `;
 
             elements.detailContent.innerHTML = html;
+            elements.detailModal.classList.add('show');
             
             // Add show more functionality for movies
             const showMoreMoviesBtn = document.querySelector('[data-show-more-movies]');
@@ -1041,28 +1125,41 @@
             }
             
             // Add click handlers for initial movies/shows in filmography
-            document.querySelectorAll('.result-card').forEach(card => {
+            elements.detailContent.querySelectorAll('.result-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const id = card.dataset.id;
                     const type = card.dataset.type;
                     showDetails(id, type);
                 });
             });
-
-            // Add back button
-            const backBtn = document.createElement('button');
-            backBtn.textContent = '← Back';
-            backBtn.style.cssText = 'position: absolute; top: 20px; left: 20px; background: #e50914; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;';
-            document.querySelector('.modal-body').insertBefore(backBtn, document.querySelector('.modal-body').firstChild);
-            
-            backBtn.addEventListener('click', () => {
-                // Go back - would need to store previous state
-                closeModal();
-            });
         }
 
         function closeModal() {
             elements.detailModal.classList.remove('show');
+            elements.backBtn.style.display = 'none';
+        }
+
+        function goBack() {
+            if (navigationStack.length > 0) {
+                navigationStack.pop(); // Remove current page
+                
+                if (navigationStack.length > 0) {
+                    const previousPage = navigationStack[navigationStack.length - 1];
+                    
+                    if (previousPage.type === 'actor') {
+                        // Go back to actor filmography without pushing again
+                        displayActorFilmography(previousPage.data, previousPage.name, true);
+                    } else if (previousPage.type === 'detail') {
+                        // Go back to movie/show details without pushing again
+                        displayDetails(previousPage.data, previousPage.mediaType, true);
+                    }
+                } else {
+                    // No more history, close modal
+                    closeModal();
+                }
+            } else {
+                closeModal();
+            }
         }
 
         function showLoading() {
